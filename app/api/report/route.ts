@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { openai, parseJsonFromModel } from "@/lib/openai";
+import { getOpenAI, parseJsonFromModel, OPENAI_KEY_MISSING_MESSAGE } from "@/lib/openai";
 import type {
   HyperInspectReport,
   InspectionResult,
@@ -59,6 +59,15 @@ function buildReportWithForm(body: ReportRequestBody): HyperInspectReport {
 }
 
 export async function POST(req: NextRequest) {
+  let openai;
+  try {
+    openai = getOpenAI();
+  } catch {
+    return NextResponse.json(
+      { error: OPENAI_KEY_MISSING_MESSAGE },
+      { status: 503 }
+    );
+  }
   try {
     const body = (await req.json().catch(() => null)) as
       | ReportRequestBody

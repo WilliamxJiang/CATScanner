@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { openai, parseJsonFromModel } from "@/lib/openai";
+import { getOpenAI, parseJsonFromModel, OPENAI_KEY_MISSING_MESSAGE } from "@/lib/openai";
 import type { InspectionResult } from "@/lib/types";
 import { INSPECT_STATUS_PROMPT } from "@/prompts/inspect";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
+  let openai;
+  try {
+    openai = getOpenAI();
+  } catch {
+    return NextResponse.json(
+      { error: OPENAI_KEY_MISSING_MESSAGE },
+      { status: 503 }
+    );
+  }
   try {
     const formData = await req.formData();
     const image = formData.get("image");

@@ -1,15 +1,32 @@
 import OpenAI from "openai";
 
-if (!process.env.OPENAI_API_KEY) {
-  // In dev we prefer a clear error; in production this will surface in route handlers.
+const apiKey = process.env.OPENAI_API_KEY?.trim();
+
+if (!apiKey) {
   console.warn(
-    "OPENAI_API_KEY is not set. API routes that depend on OpenAI will fail until it is configured."
+    "OPENAI_API_KEY is not set. API routes that depend on OpenAI will return 503 until it is configured (e.g. in Vercel Environment Variables)."
   );
 }
 
-export const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+/** Lazy client so we don't throw at import time when OPENAI_API_KEY is missing (e.g. on Vercel before env is set). */
+let _client: OpenAI | null = apiKey ? new OpenAI({ apiKey }) : null;
+
+export function getOpenAI(): OpenAI {
+  if (!_client) {
+    const key = process.env.OPENAI_API_KEY?.trim();
+    if (!key) {
+      throw new Error(
+        "OPENAI_API_KEY is not set. Add it in Vercel Project Settings → Environment Variables (or in .env.local for local dev)."
+      );
+    }
+    _client = new OpenAI({ apiKey: key });
+  }
+  return _client;
+}
+
+/** Message returned when OPENAI_API_KEY is not set (e.g. 503 response). */
+export const OPENAI_KEY_MISSING_MESSAGE =
+  "OpenAI API key is not configured. Add OPENAI_API_KEY in Vercel Project Settings → Environment Variables (or .env.local for local dev).";
 
 /**
  * Some model responses may wrap JSON in markdown code fences or include extra text.
