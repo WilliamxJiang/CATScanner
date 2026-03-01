@@ -8,6 +8,20 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { RiskBar } from "@/components/RiskBar";
 import CameraCapture from "@/components/CameraCapture";
 
+// Web Speech API – not in default TypeScript DOM typings
+interface SpeechRecognitionType {
+  start(): void;
+  stop(): void;
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  maxAlternatives: number;
+  onstart: (() => void) | null;
+  onend: (() => void) | null;
+  onerror: ((event: unknown) => void) | null;
+  onresult: ((event: unknown) => void) | null;
+}
+
 function SeverityIndicator({ severity }: { severity: "low" | "medium" | "high" }) {
   const config = {
     high: {
@@ -56,7 +70,7 @@ interface VoiceNotesInputProps {
 
 function VoiceNotesInput({ notes, disabled, onNotesChange }: VoiceNotesInputProps) {
   const [isRecording, setIsRecording] = useState(false);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<SpeechRecognitionType | null>(null);
   const userStoppedRef = useRef(false);
 
   const handleToggleRecording = () => {
