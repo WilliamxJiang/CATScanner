@@ -1,12 +1,106 @@
 "use client";
 
 import React from "react";
-import type { HyperInspectReport } from "@/lib/types";
+import type { HyperInspectReport, InspectionForm, InspectionFormSection } from "@/lib/types";
 import { Card } from "@/components/Card";
 import { StatusBadge } from "@/components/StatusBadge";
 import { RiskBar } from "@/components/RiskBar";
 import { FitmentBar } from "@/components/FitmentBar";
 import { AsciiBlock } from "@/components/AsciiBlock";
+import { Check, X } from "lucide-react";
+function InspectionFormView({
+  form,
+  inspectorName,
+  machineId
+}: {
+  form: InspectionForm;
+  inspectorName?: string;
+  machineId?: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-gray-800 bg-black/60 overflow-hidden">
+      <div className="p-3 border-b border-gray-800">
+        <h2 className="text-sm font-semibold text-gray-100 uppercase tracking-wide">
+          HYDRAULIC EXCAVATOR
+        </h2>
+        <p className="text-[11px] text-cat-yellow font-medium mt-0.5">
+          {form.formTitle} ({form.formNumber})
+        </p>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2 text-[11px] text-gray-400">
+          <span>Operator/Inspector</span>
+          <span className="text-gray-100">{form.operatorInspector || inspectorName || "—"}</span>
+          <span>Date</span>
+          <span className="text-gray-100">{form.date}</span>
+          <span>Time</span>
+          <span className="text-gray-100">{form.time}</span>
+          <span>Serial Number</span>
+          <span className="text-gray-100">{form.serialNumber || machineId || "—"}</span>
+          <span>Machine Hours</span>
+          <span className="text-gray-100">{form.machineHours || "—"}</span>
+        </div>
+      </div>
+      <div className="divide-y divide-gray-800">
+        {form.sections.map((sec: InspectionFormSection) => (
+          <div key={sec.title} className="p-3">
+            <h3 className="text-[11px] font-semibold text-cat-yellow uppercase tracking-wide mb-2">
+              {sec.title}
+            </h3>
+            <div className="space-y-0">
+              <div className="hidden sm:grid grid-cols-[1fr_auto_1fr_auto_1fr] gap-2 text-[10px] text-gray-500 font-medium border-b border-gray-700 pb-1">
+                <span>What are you inspecting?</span>
+                <span className="text-center">√</span>
+                <span>What are you looking for?</span>
+                <span className="text-center">√</span>
+                <span>Evaluator Comments</span>
+              </div>
+              {sec.rows.map((row, i) => (
+                <div
+                  key={`${row.component}-${i}`}
+                  className={`flex flex-wrap gap-x-2 gap-y-1 py-2 border-b border-gray-800/80 last:border-0 text-[11px] sm:grid sm:grid-cols-[1fr_auto_1fr_auto_1fr] sm:items-center sm:gap-2 ${!row.passed ? "bg-red-500/5" : ""}`}
+                >
+                  <span className="sm:col-span-1 font-medium text-gray-200 w-full sm:w-auto">
+                    {row.component}
+                  </span>
+                  <span className="shrink-0 sm:justify-self-center">
+                    {row.passed ? (
+                      <Check className="w-4 h-4 text-green-500" aria-label="Pass" />
+                    ) : (
+                      <X className="w-4 h-4 text-red-400" aria-label="Fail" />
+                    )}
+                  </span>
+                  <span className="text-gray-400 w-full sm:w-auto sm:col-span-1">
+                    {row.whatToLookFor}
+                  </span>
+                  <span className="shrink-0 sm:justify-self-center hidden sm:inline">
+                    {row.passed ? (
+                      <Check className="w-4 h-4 text-green-500" />
+                    ) : (
+                      <X className="w-4 h-4 text-red-400" />
+                    )}
+                  </span>
+                  <span className="text-gray-300 text-[10px] w-full sm:w-auto sm:col-span-1">
+                    {row.evaluatorComments || "—"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="p-3 border-t border-gray-800 text-[11px] text-gray-400">
+        <p className="font-medium text-gray-300 mb-1">NOTES</p>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+          <span>Inspected by</span>
+          <span className="text-gray-100">{form.notesInspectedBy || "—"}</span>
+          <span>Date</span>
+          <span className="text-gray-100">{form.notesDate}</span>
+          <span>Time</span>
+          <span className="text-gray-100">{form.notesTime}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface ReportScreenProps {
   inspectorName: string;
@@ -83,25 +177,42 @@ export default function ReportScreen({
 
       {report && (
         <>
-          <div className="rounded-2xl border border-gray-800 bg-black/60 p-3">
-            <div className="flex items-center justify-between gap-2 text-[11px] text-gray-400 mb-2">
-              <span>
-                Inspector:{" "}
-                <span className="font-semibold text-gray-100">
-                  {report.inspectorName || inspectorName || "—"}
+          {report.inspectionForm ? (
+            <InspectionFormView
+              form={report.inspectionForm}
+              inspectorName={report.inspectorName || inspectorName}
+              machineId={report.machineId || machineId}
+            />
+          ) : (
+            <div className="rounded-2xl border border-gray-800 bg-black/60 p-3">
+              <div className="flex items-center justify-between gap-2 text-[11px] text-gray-400 mb-2">
+                <span>
+                  Inspector:{" "}
+                  <span className="font-semibold text-gray-100">
+                    {report.inspectorName || inspectorName || "—"}
+                  </span>
                 </span>
-              </span>
-              <span>
-                Machine:{" "}
-                <span className="font-semibold text-gray-100">
-                  {report.machineId || machineId || "—"}
+                <span>
+                  Machine:{" "}
+                  <span className="font-semibold text-gray-100">
+                    {report.machineId || machineId || "—"}
+                  </span>
                 </span>
-              </span>
+              </div>
+              <p className="text-[11px] text-gray-300 line-clamp-3 mb-2">
+                {report.overallSummary}
+              </p>
+              <p className="text-[10px] text-gray-500 mb-3">
+                {report.timestamp}
+              </p>
             </div>
+          )}
+
+          <div className="rounded-2xl border border-gray-800 bg-black/60 p-3">
             <p className="text-[11px] text-gray-300 line-clamp-3 mb-2">
               {report.overallSummary}
             </p>
-            <p className="text-[10px] text-gray-500 mb-3">
+            <p className="text-[10px] text-gray-500 mb-2">
               {report.timestamp}
             </p>
             <button
@@ -113,7 +224,7 @@ export default function ReportScreen({
             </button>
           </div>
 
-          {report.inspection && (
+          {report.inspection && !report.inspectionForm && (
             <Card title="Inspection">
               <div className="flex items-center justify-between gap-2">
                 <StatusBadge status={report.inspection.status} />

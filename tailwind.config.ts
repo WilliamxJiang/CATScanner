@@ -7,6 +7,9 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        cat: ["Helvetica", "Arial", "sans-serif"]
+      },
       colors: {
         cat: {
           yellow: "#FFCD11",

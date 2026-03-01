@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { openai, parseJsonFromModel } from "@/lib/openai";
 import type { InspectionResult } from "@/lib/types";
+import { INSPECT_STATUS_PROMPT } from "@/prompts/inspect";
 
 export const runtime = "nodejs";
 
@@ -45,12 +46,13 @@ export async function POST(req: NextRequest) {
       "  recommendedNextSteps: string[];\n" +
       "}\n" +
       "Use the image and any notes to infer likely issues such as leaks, wear, damage, missing guards, or unsafe conditions.\n" +
-      "The `status` should summarize overall condition (PASS, FAIL, or MONITOR).\n" +
-      "The `riskScore` should be between 0 and 100 (higher means higher risk).\n" +
-      "Do not include any explanation outside of the JSON object.";
+      "The `riskScore` should be between 0 and 100 (higher means higher risk).\n\n" +
+      INSPECT_STATUS_PROMPT +
+      "\nDo not include any explanation outside of the JSON object.";
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
+      response_format: { type: "json_object" },
       messages: [
         {
           role: "system",
@@ -64,7 +66,7 @@ export async function POST(req: NextRequest) {
               text:
                 "Perform a structured CAT-style inspection for this machine image. " +
                 "Consider the overall condition, visible wear, leaks, safety items, and environment.\n\n" +
-                `Voice notes from operator/inspector: ${notesText}`
+                `Notes from operator/inspector: ${notesText}`
             },
             {
               type: "image_url",

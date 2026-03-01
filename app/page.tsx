@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { Camera, Wrench, Map, FileText } from "lucide-react";
+
 import type {
   InspectionResult,
   PartsIdentificationResult,
@@ -239,13 +240,17 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-cat-bg text-white">
-      <header className="px-4 pt-4 pb-3 flex items-center justify-between shrink-0">
+      <header className="px-4 pt-4 pb-3 flex items-center justify-between shrink-0 bg-black">
         <div>
-          <h1 className="text-lg font-semibold tracking-tight">CAT HyperInspect</h1>
+          <h1 className="text-lg font-cat font-bold tracking-tight text-white">FieldIQ</h1>
           <p className="text-xs text-gray-400">AI field assistant for inspections</p>
         </div>
-        <div className="w-9 h-9 rounded-lg bg-cat-yellow flex items-center justify-center text-black text-xs font-bold shrink-0">
-          CAT
+        <div className="h-14 flex items-center justify-center shrink-0">
+          <img
+            src="/cat-logo.png"
+            alt="CAT"
+            className="h-14 w-auto object-contain"
+          />
         </div>
       </header>
 

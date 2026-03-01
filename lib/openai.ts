@@ -20,23 +20,34 @@ export function parseJsonFromModel(text: string): unknown {
 
   // Strip common ```json ... ``` wrappers if present.
   const codeFenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  const jsonCandidate = codeFenceMatch ? codeFenceMatch[1].trim() : trimmed;
+  let jsonCandidate = codeFenceMatch ? codeFenceMatch[1].trim() : trimmed;
 
-  try {
-    return JSON.parse(jsonCandidate);
-  } catch (err) {
-    // Fallback: try to parse from the first '{' to the last '}' in the text.
-    const firstBrace = jsonCandidate.indexOf("{");
-    const lastBrace = jsonCandidate.lastIndexOf("}");
-    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-      const sliced = jsonCandidate.slice(firstBrace, lastBrace + 1);
-      try {
-        return JSON.parse(sliced);
-      } catch {
-        // fall through
-      }
+  const tryParse = (str: string): unknown => {
+    try {
+      return JSON.parse(str);
+    } catch {
+      return null;
     }
-    throw new Error("Failed to parse JSON from model response");
+  };
+
+  let result = tryParse(jsonCandidate);
+  if (result !== null) return result;
+
+  // Fallback: extract from first '{' to last '}'.
+  const firstBrace = jsonCandidate.indexOf("{");
+  const lastBrace = jsonCandidate.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    const sliced = jsonCandidate.slice(firstBrace, lastBrace + 1);
+    result = tryParse(sliced);
+    if (result !== null) return result;
+
+    // Try stripping trailing commas (common in LLM output).
+    const noTrailingCommas = sliced
+      .replace(/,\s*([}\]])/g, "$1");
+    result = tryParse(noTrailingCommas);
+    if (result !== null) return result;
   }
+
+  throw new Error("Failed to parse JSON from model response");
 }
 

@@ -6,6 +6,7 @@ import type {
   LayoutResult,
   PartsIdentificationResult
 } from "@/lib/types";
+import { buildInspectionForm } from "@/lib/inspection-form";
 
 export const runtime = "nodejs";
 
@@ -15,6 +16,46 @@ interface ReportRequestBody {
   inspection?: InspectionResult;
   parts?: PartsIdentificationResult;
   layout?: LayoutResult;
+}
+
+function summarizeFallback(body: ReportRequestBody): string {
+  const parts: string[] = [];
+  if (body.inspection) {
+    parts.push(`Inspection: ${body.inspection.status}, risk ${body.inspection.riskScore}/100. ${body.inspection.notes || ""}`);
+  }
+  if (body.parts) {
+    parts.push(`Parts: ${body.parts.candidates?.length ?? 0} candidate(s). ${body.parts.explanation || ""}`);
+  }
+  if (body.layout) {
+    parts.push(`Layout: ${body.layout.plans?.length ?? 0} plan(s). ${body.layout.overallRecommendation || ""}`);
+  }
+  return parts.join(" ") || "Report generated from available data.";
+}
+
+function buildFallbackReport(body: ReportRequestBody): NextResponse<HyperInspectReport> {
+  const report = buildReportWithForm(body);
+  return NextResponse.json<HyperInspectReport>(report);
+}
+
+function buildReportWithForm(body: ReportRequestBody): HyperInspectReport {
+  const report: HyperInspectReport = {
+    timestamp: new Date().toISOString(),
+    inspectorName: body.inspectorName,
+    machineId: body.machineId,
+    inspection: body.inspection ?? undefined,
+    parts: body.parts ?? undefined,
+    layout: body.layout ?? undefined,
+    overallSummary: summarizeFallback(body)
+  };
+  if (body.inspection) {
+    report.inspectionForm = buildInspectionForm(body.inspection, {
+      operatorInspector: body.inspectorName ?? "",
+      machineId: body.machineId ?? "",
+      date: new Date().toLocaleDateString(),
+      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    });
+  }
+  return report;
 }
 
 export async function POST(req: NextRequest) {
@@ -90,8 +131,9 @@ export async function POST(req: NextRequest) {
       "  overallSummary: string;\n" +
       "}\n" +
       "Summarize the key risks, recommended actions, and cross-links between inspection findings, parts, and layout.\n" +
-      "Timestamp should be an ISO 8601 string (UTC is fine).\n" +
-      "Do not include any explanation outside of the JSON object.";
+      "Timestamp must be an ISO 8601 string (e.g. new Date().toISOString()).\n" +
+      "Echo or summarize the provided inspection, parts, and layout inside the report object.\n" +
+      "Respond with ONLY the raw JSON object. No markdown, no code fences (no ```), no text before or after.";
 
     const userPrompt = {
       inspectorName: inspectorName ?? null,
@@ -117,15 +159,12 @@ export async function POST(req: NextRequest) {
         }
       ],
       temperature: 0.3,
-      max_tokens: 1200
+      max_tokens: 2000
     });
 
     const content = completion.choices[0]?.message?.content;
     if (!content) {
-      return NextResponse.json(
-        { error: "Model returned no content." },
-        { status: 500 }
-      );
+      return buildFallbackReport(body);
     }
 
     let parsed: HyperInspectReport;
@@ -133,12 +172,19 @@ export async function POST(req: NextRequest) {
       const data = parseJsonFromModel(content);
       parsed = data as HyperInspectReport;
     } catch (err) {
-      return NextResponse.json(
-        { error: "Failed to parse report JSON from model response." },
-        { status: 500 }
-      );
+      return buildFallbackReport(body);
     }
 
+    if (!parsed.timestamp) parsed.timestamp = new Date().toISOString();
+    if (!parsed.overallSummary) parsed.overallSummary = summarizeFallback(body);
+    if (body.inspection && !parsed.inspectionForm) {
+      parsed.inspectionForm = buildInspectionForm(body.inspection, {
+        operatorInspector: parsed.inspectorName ?? body.inspectorName ?? "",
+        machineId: parsed.machineId ?? body.machineId ?? "",
+        date: new Date().toLocaleDateString(),
+        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      });
+    }
     return NextResponse.json<HyperInspectReport>(parsed);
   } catch (error) {
     console.error("Error in /api/report:", error);

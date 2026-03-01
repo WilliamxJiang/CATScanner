@@ -1,11 +1,41 @@
-"use client";
+ "use client";
 
-import React from "react";
+import React, { useRef, useState } from "react";
+import { AlertTriangle, AlertCircle, Info, Mic } from "lucide-react";
 import type { InspectionResult } from "@/lib/types";
 import { Card } from "@/components/Card";
 import { StatusBadge } from "@/components/StatusBadge";
 import { RiskBar } from "@/components/RiskBar";
-import ImageUploadCard from "@/components/ImageUploadCard";
+import CameraCapture from "@/components/CameraCapture";
+
+function SeverityIndicator({ severity }: { severity: "low" | "medium" | "high" }) {
+  const config = {
+    high: {
+      icon: AlertTriangle,
+      className: "bg-red-500/20 text-red-400 border-red-500/40",
+      title: "Critical – immediate attention"
+    },
+    medium: {
+      icon: AlertCircle,
+      className: "bg-amber-500/20 text-amber-400 border-amber-500/40",
+      title: "Caution – schedule maintenance"
+    },
+    low: {
+      icon: Info,
+      className: "bg-sky-500/20 text-sky-400 border-sky-500/40",
+      title: "Low – note / monitor"
+    }
+  };
+  const { icon: Icon, className, title } = config[severity];
+  return (
+    <span
+      className={`shrink-0 flex items-center justify-center w-8 h-8 rounded-full border ${className}`}
+      title={title}
+    >
+      <Icon className="w-4 h-4" />
+    </span>
+  );
+}
 
 interface InspectionScreenProps {
   previewUrl: string | null;
@@ -18,6 +48,115 @@ interface InspectionScreenProps {
   onSubmit: (e: React.FormEvent) => void;
 }
 
+interface VoiceNotesInputProps {
+  notes: string;
+  disabled: boolean;
+  onNotesChange: (value: string) => void;
+}
+
+function VoiceNotesInput({ notes, disabled, onNotesChange }: VoiceNotesInputProps) {
+  const [isRecording, setIsRecording] = useState(false);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const userStoppedRef = useRef(false);
+
+  const handleToggleRecording = () => {
+    if (isRecording) {
+      userStoppedRef.current = true;
+      recognitionRef.current?.stop();
+      return;
+    }
+
+    if (typeof window === "undefined") return;
+
+    const SpeechRecognitionCtor =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognitionCtor) {
+      alert("Voice notes are not supported in this browser.");
+      return;
+    }
+
+    userStoppedRef.current = false;
+    const recognition = new SpeechRecognitionCtor();
+    recognition.lang = "en-US";
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+      setIsRecording(true);
+    };
+
+    recognition.onerror = (e: any) => {
+      if (e?.error === "no-speech" || e?.error === "aborted") {
+        return;
+      }
+      userStoppedRef.current = true;
+      setIsRecording(false);
+    };
+
+    recognition.onend = () => {
+      if (userStoppedRef.current) {
+        setIsRecording(false);
+        recognitionRef.current = null;
+        return;
+      }
+      try {
+        recognition.start();
+      } catch {
+        setIsRecording(false);
+        recognitionRef.current = null;
+      }
+    };
+
+    recognition.onresult = (event: any) => {
+      const transcript = Array.from(event.results)
+        .map((result: any) => result[0]?.transcript ?? "")
+        .join(" ")
+        .trim();
+
+      if (!transcript) return;
+
+      const combined = notes ? `${notes.trim()} ${transcript}` : transcript;
+      onNotesChange(combined);
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+  };
+
+  return (
+    <div>
+      <label className="mb-1 block text-[11px] font-medium text-gray-400">
+        Notes
+      </label>
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          value={notes}
+          onChange={(e) => onNotesChange(e.target.value)}
+          disabled={disabled}
+          className="w-full rounded-xl border border-gray-700/60 bg-black/40 px-3 py-2 text-sm text-gray-100 placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-cat-yellow"
+          placeholder="e.g. Oil spot under left side, sluggish travel"
+        />
+        <button
+          type="button"
+          onClick={handleToggleRecording}
+          disabled={disabled}
+          className={`flex items-center justify-center rounded-full px-3 py-2 text-xs border transition-colors ${
+            isRecording
+              ? "border-red-400 bg-red-500/20 text-red-200"
+              : "border-gray-600 bg-black/40 text-gray-200 hover:bg-gray-800"
+          }`}
+        >
+          <Mic className="w-3 h-3 mr-1" />
+          {isRecording ? "Stop" : "Speak"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function InspectionScreen({
   previewUrl,
   notes,
@@ -28,28 +167,24 @@ export default function InspectionScreen({
   onNotesChange,
   onSubmit
 }: InspectionScreenProps) {
+  const handleGallerySelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    if (file) onImageChange(file);
+    e.target.value = "";
+  };
+
   return (
     <div className="space-y-4 pb-6">
       <form onSubmit={onSubmit} className="space-y-3">
-        <ImageUploadCard
-          label="Machine image"
-          sublabel="Tap to take or choose a photo"
-          onFileSelected={onImageChange}
+        <CameraCapture
+          key={previewUrl ? "preview" : "camera"}
+          onCapture={(file) => onImageChange(file)}
           previewUrl={previewUrl}
-          loading={loading}
+          onRetake={() => onImageChange(null)}
+          onChooseFromGallery={handleGallerySelect}
+          disabled={loading}
         />
-        <div>
-          <label className="mb-1 block text-[11px] font-medium text-gray-400">
-            Voice notes
-          </label>
-          <input
-            type="text"
-            value={notes}
-            onChange={(e) => onNotesChange(e.target.value)}
-            className="w-full rounded-xl border border-gray-700/60 bg-black/40 px-3 py-2 text-sm text-gray-100 placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-cat-yellow"
-            placeholder="e.g. Oil spot under left side, sluggish travel"
-          />
-        </div>
+        <VoiceNotesInput notes={notes} onNotesChange={onNotesChange} disabled={loading} />
         {error && (
           <p className="text-[11px] text-red-400">{error}</p>
         )}
@@ -108,9 +243,7 @@ export default function InspectionScreen({
                       {issue.description}
                     </p>
                   </div>
-                  <span className="shrink-0 px-2 py-1 rounded-full text-[10px] bg-gray-800 text-gray-200 uppercase">
-                    {issue.severity}
-                  </span>
+                  <SeverityIndicator severity={issue.severity} />
                 </div>
               ))}
             </div>

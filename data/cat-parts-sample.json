@@ -1,0 +1,17 @@
+[
+  { "partNumber": "230-5743", "description": "Hydraulic cylinder assembly", "equipmentModel": "320" },
+  { "partNumber": "230-5744", "description": "Hydraulic cylinder rod", "equipmentModel": "320" },
+  { "partNumber": "123-4567", "description": "Track roller", "equipmentModel": "320" },
+  { "partNumber": "456-7890", "description": "Idler assembly", "equipmentModel": "320" },
+  { "partNumber": "789-0123", "description": "Cooling system hose", "equipmentModel": "320" },
+  { "partNumber": "234-5678", "description": "Step assembly - upper", "equipmentModel": "320" },
+  { "partNumber": "345-6789", "description": "Step assembly - lower", "equipmentModel": "320" },
+  { "partNumber": "567-8901", "description": "Handrail bracket", "equipmentModel": "320" },
+  { "partNumber": "678-9012", "description": "Windshield seal", "equipmentModel": "320" },
+  { "partNumber": "890-1234", "description": "Mirror assembly", "equipmentModel": "320" },
+  { "partNumber": "901-2345", "description": "Engine access cover hinge", "equipmentModel": "320" },
+  { "partNumber": "111-2222", "description": "Bucket tooth", "equipmentModel": "320" },
+  { "partNumber": "222-3333", "description": "Filter - hydraulic", "equipmentModel": "320" },
+  { "partNumber": "333-4444", "description": "Filter - engine oil", "equipmentModel": "320" },
+  { "partNumber": "444-5555", "description": "Radiator cap", "equipmentModel": "320" }
+]
