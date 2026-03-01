@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # FieldIQ
 
 **FieldIQ** is an AI-powered field assistant for equipment inspections, parts identification, and site layout planning. It uses GPT-4 with vision to analyze photos and generate structured reports in a CAT-inspired yellow/black UI.
@@ -88,9 +87,3 @@
 |-----------------|----------|--------------------------------|
 | `OPENAI_API_KEY` | Yes     | OpenAI API key for GPT-4o calls |
 
-## License
-
-Private / HackIllinois project.
-=======
-
->>>>>>> 4b6ea72f9e35e59e935375432c0dc263f28d847a
