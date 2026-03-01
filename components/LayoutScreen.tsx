@@ -4,6 +4,7 @@ import React from "react";
 import type { LayoutResult } from "@/lib/types";
 import { Card } from "@/components/Card";
 import { AsciiBlock } from "@/components/AsciiBlock";
+import Layout3DView from "@/components/Layout3DView";
 
 interface LayoutScreenProps {
   siteType: string;
@@ -167,7 +168,11 @@ export default function LayoutScreen({
                 <p className="text-[11px] text-gray-300 mb-2 line-clamp-2">
                   {plan.summary}
                 </p>
-                <AsciiBlock text={plan.asciiMap} />
+                {plan.zones?.length ? (
+                  <Layout3DView zones={plan.zones} primaryGoal={plan.primaryGoal} />
+                ) : (
+                  <AsciiBlock text={plan.asciiMap} />
+                )}
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   {plan.pros?.length > 0 && (
                     <div>

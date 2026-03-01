@@ -7,6 +7,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { RiskBar } from "@/components/RiskBar";
 import { FitmentBar } from "@/components/FitmentBar";
 import { AsciiBlock } from "@/components/AsciiBlock";
+import Layout3DView from "@/components/Layout3DView";
 import { Check, X } from "lucide-react";
 function InspectionFormView({
   form,
@@ -177,14 +178,16 @@ export default function ReportScreen({
 
       {report && (
         <>
-          {report.inspectionForm ? (
+          {report.inspectionForm && (
             <InspectionFormView
               form={report.inspectionForm}
               inspectorName={report.inspectorName || inspectorName}
               machineId={report.machineId || machineId}
             />
-          ) : (
-            <div className="rounded-2xl border border-gray-800 bg-black/60 p-3">
+          )}
+
+          <div className="rounded-2xl border border-gray-800 bg-black/60 p-3">
+            {!report.inspectionForm && (
               <div className="flex items-center justify-between gap-2 text-[11px] text-gray-400 mb-2">
                 <span>
                   Inspector:{" "}
@@ -199,16 +202,7 @@ export default function ReportScreen({
                   </span>
                 </span>
               </div>
-              <p className="text-[11px] text-gray-300 line-clamp-3 mb-2">
-                {report.overallSummary}
-              </p>
-              <p className="text-[10px] text-gray-500 mb-3">
-                {report.timestamp}
-              </p>
-            </div>
-          )}
-
-          <div className="rounded-2xl border border-gray-800 bg-black/60 p-3">
+            )}
             <p className="text-[11px] text-gray-300 line-clamp-3 mb-2">
               {report.overallSummary}
             </p>
@@ -281,7 +275,11 @@ export default function ReportScreen({
                         {plan.primaryGoal}
                       </span>
                     </div>
-                    <AsciiBlock text={plan.asciiMap} />
+                    {plan.zones?.length ? (
+                      <Layout3DView zones={plan.zones} primaryGoal={plan.primaryGoal} />
+                    ) : (
+                      <AsciiBlock text={plan.asciiMap} />
+                    )}
                   </div>
                 ))}
               </div>

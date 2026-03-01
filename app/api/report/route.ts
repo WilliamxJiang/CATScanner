@@ -93,64 +93,12 @@ export async function POST(req: NextRequest) {
     }
 
     const systemPrompt =
-      "You are an assistant generating a unified CAT HyperInspect report.\n" +
-      "You MUST respond with ONLY valid JSON matching this TypeScript type exactly:\n" +
-      "interface HyperInspectReport {\n" +
-      "  timestamp: string;\n" +
-      "  machineId?: string;\n" +
-      "  inspectorName?: string;\n" +
-      "  inspection?: {\n" +
-      '    status: \"PASS\" | \"FAIL\" | \"MONITOR\";\n' +
-      "    riskScore: number;\n" +
-      "    issues: {\n" +
-      "      type: string;\n" +
-      '      severity: \"low\" | \"medium\" | \"high\";\n' +
-      "      location?: string;\n" +
-      "      description: string;\n" +
-      "      recommendation: string;\n" +
-      "    }[];\n" +
-      "    notes: string;\n" +
-      "    recommendedNextSteps: string[];\n" +
-      "  };\n" +
-      "  parts?: {\n" +
-      "    equipmentModel?: string;\n" +
-      "    candidates: {\n" +
-      "      partNumber: string;\n" +
-      "      description?: string;\n" +
-      "      fitmentScore: number;\n" +
-      "      notes?: string;\n" +
-      "    }[];\n" +
-      "    explanation: string;\n" +
-      "  };\n" +
-      "  layout?: {\n" +
-      "    plans: {\n" +
-      "      id: string;\n" +
-      "      name: string;\n" +
-      '      primaryGoal: \"safety\" | \"efficiency\" | \"cost\";\n' +
-      "      asciiMap: string;\n" +
-      "      summary: string;\n" +
-      "      pros: string[];\n" +
-      "      cons: string[];\n" +
-      "      estimatedTravelDistance?: string;\n" +
-      '      congestionRisk?: \"low\" | \"medium\" | \"high\";\n' +
-      '      safetyRisk?: \"low\" | \"medium\" | \"high\";\n' +
-      "    }[];\n" +
-      "    overallRecommendation: string;\n" +
-      "  };\n" +
-      "  overallSummary: string;\n" +
-      "}\n" +
-      "Summarize the key risks, recommended actions, and cross-links between inspection findings, parts, and layout.\n" +
-      "Timestamp must be an ISO 8601 string (e.g. new Date().toISOString()).\n" +
-      "Echo or summarize the provided inspection, parts, and layout inside the report object.\n" +
-      "Respond with ONLY the raw JSON object. No markdown, no code fences (no ```), no text before or after.";
-
-    const userPrompt = {
-      inspectorName: inspectorName ?? null,
-      machineId: machineId ?? null,
-      inspection: inspection ?? null,
-      parts: parts ?? null,
-      layout: layout ?? null
-    };
+      "You are an assistant writing the executive summary for a FieldIQ inspection report. " +
+      "You will receive JSON containing the actual inspection result (status, risk score, issues, notes), optional parts identification, and optional layout plans. " +
+      "Your job is to write a single narrative field: overallSummary. " +
+      "Respond with ONLY valid JSON in this exact shape: { \"overallSummary\": \"Your 2–4 sentence summary here.\" }\n" +
+      "The overallSummary must be specific to the data provided: mention the actual inspection status (PASS/FAIL/MONITOR), risk score, key issues by type/location if any, and any parts or layout highlights. " +
+      "Do not invent or generalize—reference only what is in the provided data. No markdown, no code fences.";
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
@@ -163,12 +111,12 @@ export async function POST(req: NextRequest) {
         {
           role: "user",
           content:
-            "Generate a concise but comprehensive HyperInspect report from the following JSON data:\n" +
-            JSON.stringify(userPrompt, null, 2)
+            "Write the overallSummary for this report based on the following analysis data. Be specific to these findings.\n\n" +
+            JSON.stringify({ inspectorName, machineId, inspection, parts, layout }, null, 2)
         }
       ],
       temperature: 0.3,
-      max_tokens: 2000
+      max_tokens: 500
     });
 
     const content = completion.choices[0]?.message?.content;
@@ -176,25 +124,37 @@ export async function POST(req: NextRequest) {
       return buildFallbackReport(body);
     }
 
-    let parsed: HyperInspectReport;
+    let parsedSummary: string;
     try {
-      const data = parseJsonFromModel(content);
-      parsed = data as HyperInspectReport;
+      const data = parseJsonFromModel(content) as HyperInspectReport;
+      parsedSummary =
+        typeof data.overallSummary === "string" && data.overallSummary.trim()
+          ? data.overallSummary.trim()
+          : summarizeFallback(body);
     } catch (err) {
       return buildFallbackReport(body);
     }
 
-    if (!parsed.timestamp) parsed.timestamp = new Date().toISOString();
-    if (!parsed.overallSummary) parsed.overallSummary = summarizeFallback(body);
-    if (body.inspection && !parsed.inspectionForm) {
-      parsed.inspectionForm = buildInspectionForm(body.inspection, {
-        operatorInspector: parsed.inspectorName ?? body.inspectorName ?? "",
-        machineId: parsed.machineId ?? body.machineId ?? "",
+    // Report is always built from the actual analysis (request body), not from LLM output.
+    // Only the overallSummary narrative comes from the LLM so it's specific to the data.
+    const report: HyperInspectReport = {
+      timestamp: new Date().toISOString(),
+      inspectorName: body.inspectorName ?? undefined,
+      machineId: body.machineId ?? undefined,
+      inspection: body.inspection ?? undefined,
+      parts: body.parts ?? undefined,
+      layout: body.layout ?? undefined,
+      overallSummary: parsedSummary
+    };
+    if (body.inspection) {
+      report.inspectionForm = buildInspectionForm(body.inspection, {
+        operatorInspector: body.inspectorName ?? "",
+        machineId: body.machineId ?? "",
         date: new Date().toLocaleDateString(),
         time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
       });
     }
-    return NextResponse.json<HyperInspectReport>(parsed);
+    return NextResponse.json<HyperInspectReport>(report);
   } catch (error) {
     console.error("Error in /api/report:", error);
     return NextResponse.json(

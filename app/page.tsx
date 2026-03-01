@@ -240,12 +240,17 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-cat-bg text-white">
-      <header className="px-4 pt-4 pb-3 flex items-center justify-between shrink-0 bg-black">
-        <div>
-          <h1 className="text-lg font-cat font-bold tracking-tight text-white">FieldIQ</h1>
-          <p className="text-xs text-gray-400">AI field assistant for inspections</p>
+      <header className="px-4 pt-5 pb-4 flex items-center justify-between shrink-0 bg-black border-b border-gray-800/80">
+        <div className="min-w-0">
+          <h1 className="font-cat font-bold text-white tracking-tight text-2xl sm:text-3xl leading-tight">
+            <span className="text-white">Field</span>
+            <span className="text-cat-yellow">IQ</span>
+          </h1>
+          <p className="text-[11px] sm:text-xs text-gray-400 mt-0.5 tracking-wide">
+            AI field assistant for inspections
+          </p>
         </div>
-        <div className="h-14 flex items-center justify-center shrink-0">
+        <div className="h-14 flex items-center justify-center shrink-0 ml-3">
           <img
             src="/cat-logo.png"
             alt="CAT"

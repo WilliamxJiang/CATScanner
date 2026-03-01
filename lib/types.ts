@@ -31,11 +31,27 @@ export interface PartsIdentificationResult {
 
 export type LayoutOptimizationGoal = "safety" | "efficiency" | "cost";
 
+/** 3D zone for site layout (isometric view). Coordinates in 0–10 scale. */
+export interface LayoutZone {
+  id: string;
+  label: string;
+  x: number;
+  y: number;
+  z?: number;
+  width: number;
+  height: number;
+  depth?: number;
+  /** Optional color hint: safety (green), efficiency (blue), cost (yellow) */
+  colorHint?: "safety" | "efficiency" | "cost";
+}
+
 export interface LayoutPlan {
   id: string;
   name: string;
   primaryGoal: LayoutOptimizationGoal;
   asciiMap: string;
+  /** 3D zones for isometric/3D view. When present, UI can render 3D instead of ASCII. */
+  zones?: LayoutZone[];
   summary: string;
   pros: string[];
   cons: string[];
